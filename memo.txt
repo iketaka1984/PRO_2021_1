@@ -1,0 +1,4 @@
+順方向バイトコード生成; java Parser XXX.txt
+順方向実行: python vm_CUI.py code.txt f
+逆方向バイトコード生成: python vm_CUI.py code.txt c
+逆方向実行: python vm_CUI.py inv_code.txt b
