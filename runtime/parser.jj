@@ -1,0 +1,874 @@
+//パーザ定義
+PARSER_BEGIN (Parser)
+import java.io.*;
+
+public class Parser {
+    //記号表用疑似構造体
+	public static class s_table{
+	    public String  var;
+	    public int    address;
+	    public int    value;
+    }
+    public static int count=0;
+	public static int proc_count=0;
+    public static int pc=1;
+    public static int op_type=0;
+
+	//抽象機械命令
+	public static int ipush    = 1;
+	public static int load     = 2;
+	public static int store    = 3;
+	public static int jpc      = 4;
+	public static int jmp      = 5;
+	public static int op       = 6;
+	public static int label    = 7;
+    //rjmp=8,restore=9
+    public static int par      = 10;
+	public static int alloc    = 11;
+	public static int free     = 12;
+	public static int proc     = 13;
+	public static int proc_end = 14;
+	public static int block    = 15;
+	public static int end      = 16;
+	public static int fork     = 17;
+	public static int merge    = 18;
+	//public static int call     = 19;
+	//public static int ret_label = 20;
+	public static int w_label  = 21;
+	public static int w_end    = 22;
+	public static int func     = 19;
+	public static int ret      = 20;
+	public static int nop      = 0;
+
+	public static void main(String args[]){
+        long startTime = System.currentTimeMillis();
+	    s_table[] arr_table = new s_table[50];
+		for(int i=0;i < 50; i++){
+			arr_table[i] = new s_table();
+		}
+		s_table[] proc_table = new s_table[50];
+		for(int i=0;i < 50; i++){
+			proc_table[i] = new s_table();
+		}
+		try {
+			Parser parser = new Parser(new FileReader(args[0]));
+			FileWriter code = new FileWriter("code.txt");
+			FileWriter proc_table1 = new FileWriter("proc_table.txt");
+			parser.Program(arr_table,proc_table);
+			int com=0;
+			int first=0;
+			RandomAccessFile raf2 = new RandomAccessFile("code.txt","rw");
+        	for(int i=0;i<pc;i++){
+				for(int j=0;j<9;j++){
+            		com=raf2.read();
+					if(j==0){
+						first=com;
+					}
+					if(first!=49 && j==1 && com==55){
+						raf2.read();
+						String s2 = String.format("%5d\n",pc-1);
+        				raf2.write(s2.getBytes());
+						break;
+					}
+        		}
+			}
+        	raf2.close();
+			FileWriter table = new FileWriter("table.txt");
+			for(int j=0;j<count;j++){
+				table.write(""+String.format("%10s",arr_table[j].var)+" "+String.format("%2d",arr_table[j].address)+" "+String.format("%5d",arr_table[j].value)+"\n");
+			}
+			table.close();
+		}catch(Exception ex){
+			ex.printStackTrace();
+			System.err.println("Failed parse:"+ex.getMessage());
+		}
+        long endTime = System.currentTimeMillis();
+        System.out.println("elapsed_time: "+ (endTime - startTime)/1000.0 + " [sec]");
+	}
+}
+PARSER_END (Parser)
+
+//字句定義
+SKIP: {
+	    <SPACE: " " | "\t" | "\r" | "\n" >
+}
+
+TOKEN: {
+	<PAR: "par">
+	|<NUMBER: ["0"-"9"] | ["1"-"9"](["0"-"9"])*>
+	|<WHILE: "while">
+	|<DO: "do">
+    |<OD: "od">
+	|<END: "end">
+	|<PLUS: "+">
+	|<MINUS: "-">
+	|<MULT: "*">
+	|<EQ: "=">
+	|<NEQ: "<>">
+	|<LT: "<">
+	|<LE: "<=">
+	|<GT: ">">
+	|<GE: ">=">
+	|<LPAREN: "(">
+	|<RPAREN: ")">
+	|<LBRACKET: "[">
+	|<RBRACKET: "]">
+	|<LBRACE: "{">
+	|<RBRACE: "}">
+	|<COMMA: ",">
+	|<SEMICOLON: ";">
+	|<COLON: ":">
+	|<PERIOD: ".">
+	|<ASSIGN: ":=">
+	|<AND: "&&">
+	|<VAR: "var">
+	|<IF: "if">
+    |<FI: "fi">
+	|<THEN: "then">
+	|<ELSE: "else">
+    |<NOP: "nop">
+    |<NOT: "!">
+    |<REMOVE: "remove">
+    |<SK: "skip">
+	|<PROC: "proc">
+	|<FUNC: "func">
+	|<IS: "is"> 
+	|<RETURN: "return">
+	|<CALL: "call">
+	|<BEGIN: "begin">
+	|<PARALLEL: "||">
+	|<RAP: "rap">
+	|<PN: "p"(["0"-"9"])*>
+	|<FN: "f"(["0"-"9"])*>
+	|<VARIABLE: (["a"-"z"] | ["A"-"Z"])(["0"-"9"] | ["a"-"z"] | ["A"-"Z"])*>
+}
+
+void Program(s_table[] arr_table,s_table[] proc_table): {Token token1;
+} {
+	<BEGIN> token1=<VARIABLE> 
+	{try{
+		FileWriter code = new FileWriter("code.txt",true);
+		code.write(String.format("%2d ",Parser.block));
+		code.write(String.format("%5s\n",token1.image));
+		++Parser.pc;
+		code.close();
+	}catch(IOException e){
+		System.err.println("err");
+	}
+	}
+	BB(arr_table,proc_table) <END>
+	{try{
+		FileWriter code = new FileWriter("code.txt",true);
+		code.write(String.format("%2d ",Parser.end));
+		code.write(String.format("%5s\n",token1.image));
+		++Parser.pc;
+		code.close();
+	}catch(IOException e){
+		System.err.println("err");
+	}
+	}
+	|<PAR> token1=<VARIABLE> 
+		{try{
+		FileWriter code = new FileWriter("code.txt",true);
+		code.write(String.format("%2d ",Parser.fork));
+		code.write(String.format("%5s\n",token1.image));
+		++Parser.pc;
+		FileWriter clear = new FileWriter(token1.image + ".txt");
+		FileWriter table = new FileWriter(token1.image + ".txt",true);
+		table.write(String.format("%4d ",Parser.pc));
+		table.close();
+		code.write(String.format("%2d ",Parser.par));
+		code.write(String.format("%5d\n",0));
+		++Parser.pc;
+		code.close();
+	}catch(IOException e){
+		System.err.println("err");
+	}
+	}
+	Program(arr_table,proc_table) 
+	{try{
+		FileWriter code = new FileWriter("code.txt",true);
+		FileWriter table = new FileWriter(token1.image + ".txt",true);
+		table.write(String.format("%4d\n",Parser.pc));
+		table.close();
+		code.write(String.format("%2d ",Parser.par));
+		code.write("    1\n");
+		++Parser.pc;
+		code.close();
+	}catch(IOException e){
+		System.err.println("err");
+	}
+	}
+	(<PARALLEL> 
+	{try{
+		FileWriter code = new FileWriter("code.txt",true);
+		FileWriter table = new FileWriter(token1.image + ".txt",true);
+		table.write(String.format("%4d ",Parser.pc));
+		table.close();
+		code.write(String.format("%2d ",Parser.par));
+		code.write("    0\n");
+		++Parser.pc;
+		code.close();
+	}catch(IOException e){
+		System.err.println("err");
+	}
+	}
+	Program(arr_table,proc_table)
+	{try{
+		FileWriter code = new FileWriter("code.txt",true);
+		FileWriter table = new FileWriter(token1.image + ".txt",true);
+		table.write(String.format("%4d\n",Parser.pc));
+		table.close();
+		code.write(String.format("%2d ",Parser.par));
+		code.write("    1\n");
+		++Parser.pc;
+		code.close();
+	}catch(IOException e){
+		System.err.println("err");
+	}
+	}
+	)+ <RAP>
+	{try{
+		FileWriter code = new FileWriter("code.txt",true);
+		code.write(String.format("%2d ",Parser.merge));
+		code.write(String.format("%5s\n",token1.image));
+		++Parser.pc;
+		code.close();
+	}catch(IOException e){
+		System.err.println("err");
+	}
+	}
+	|S(arr_table,proc_table)
+}
+
+void BB(s_table[] arr_table,s_table[] proc_table): {
+}{
+	DV(arr_table,proc_table) DP(arr_table,proc_table) DF(arr_table,proc_table) Program(arr_table,proc_table) (<SEMICOLON> Program(arr_table,proc_table) )* RV(arr_table,proc_table)
+}
+
+void DV(s_table[] arr_table,s_table[] proc_table): {Token token1;
+} {
+    (<VAR> token1=<VARIABLE> <SEMICOLON>
+	{try{
+		int already_flag=0;
+		int alloc_opr=0;
+		for(int i=0;i<Parser.count;i++){
+			if(arr_table[i].var.equals(token1.image)){
+				already_flag=1;
+				alloc_opr=i;
+				break;
+			}
+		}
+		if(already_flag==0){
+			arr_table[Parser.count].var = token1.image;
+			arr_table[Parser.count].value = 0;
+			arr_table[Parser.count].address = Parser.count;
+			alloc_opr=Parser.count;
+		}
+		FileWriter code = new FileWriter("code.txt",true);
+		code.write(String.format("%2d ",Parser.alloc));
+		code.write(String.format("%5d\n",alloc_opr));
+		++Parser.pc;
+		code.close();
+		++Parser.count;
+	}catch(IOException e){
+		System.err.println("err");
+	}
+	}
+	)*
+}
+
+void DP(s_table[] arr_table,s_table[] proc_table): {Token token1;Token token2;Token token3;Token token4;int jlabel=0;int argflag=0;String arg="";
+}{
+	(<PROC> token1=<PN> token2=<VARIABLE>
+	{try{
+		FileWriter code = new FileWriter("code.txt",true);
+		jlabel = Parser.pc;
+		code.write(String.format("%2d ",Parser.jmp));
+		code.write(String.format("%5d\n",0));
+		++Parser.pc;
+		FileWriter table = new FileWriter("proc_table.txt",true);
+		//table.write(String.format("%4d",Parser.pc));
+		proc_table[Parser.proc_count].var = token2.image;
+		proc_table[Parser.proc_count].value = 0;
+		proc_table[Parser.proc_count].address = Parser.pc;
+		table.close();
+		code.write(String.format("%2d ",Parser.proc));
+		code.write(String.format("%5s\n",token1.image));
+		++Parser.pc;
+		code.close();
+	}catch(IOException e){
+		System.err.println("err");
+	}
+	}<LPAREN> (token3=<VARIABLE> 	
+	{try{
+		int address1 = 0;
+		for(int i=0;i<50;i++){
+			if(arr_table[i].var.equals(token1.image)){
+				address1=arr_table[i].address;
+				break;
+			}
+		}
+		FileWriter code = new FileWriter("code.txt",true);
+		code.write(String.format("%2d ",Parser.alloc));
+		code.write(String.format("%5d\n",address1));
+		++Parser.pc;
+		code.write(String.format("%2d ",Parser.store));
+		code.write(String.format("%5d\n",address1));
+		++Parser.pc;
+		code.close();
+		argflag=1;
+		arg=token3.image;
+	}catch(IOException e){
+		System.err.println("err");
+	}
+	}
+	)? <RPAREN>
+	<IS> Program(arr_table,proc_table) <END>
+	{try{
+		int address1 = 0;
+		if(argflag==1){
+			for(int i=0;i<50;i++){
+				if(arr_table[i].var.equals(arg)){
+					address1=arr_table[i].address;
+					break;
+				}
+			}
+		}
+		FileWriter code = new FileWriter("code.txt",true);
+		if(argflag==1){
+			code.write(String.format("%2d ",Parser.free));
+			code.write(String.format("%5d\n",address1));
+			++Parser.pc;
+		}
+		code.write(String.format("%2d ",Parser.proc_end));
+		code.write(String.format("%5s\n",token1.image));
+		++Parser.pc;
+		code.close();
+		RandomAccessFile raf = new RandomAccessFile("code.txt","rw");
+        for(int i=0;i<9*jlabel-6;i++){
+            raf.read();
+        }
+        String s = String.format("%5d",Parser.pc);
+        raf.write(s.getBytes());
+        raf.close();
+		FileWriter code2 = new FileWriter("code.txt",true);
+		code2.write(String.format("%2d ",Parser.label));
+		code2.write(String.format("%5d\n",0));
+		++Parser.pc;
+		code2.close();
+	}catch(IOException e){
+		System.err.println("err");
+	}
+	}
+	)*
+}
+
+void DF(s_table[] arr_table,s_table[] proc_table): {Token token1;Token token2;Token token3;Token token4;int jlabel=0;int argflag=0;String arg="";
+} {
+	(<FUNC> token1=<FN> token2=<VARIABLE>
+	{try{
+		FileWriter code = new FileWriter("code.txt",true);
+		jlabel = Parser.pc;
+		code.write(String.format("%2d ",Parser.jmp));
+		code.write(String.format("%5d\n",0));
+		++Parser.pc;
+		FileWriter table = new FileWriter("proc_table.txt",true);
+		//table.write(String.format("%4d",Parser.pc));
+		proc_table[Parser.proc_count].var = token2.image;
+		proc_table[Parser.proc_count].value = 0;
+		proc_table[Parser.proc_count].address = Parser.pc;
+		table.close();
+		code.write(String.format("%2d ",Parser.func));
+		code.write(String.format("%5s\n",token1.image));
+		++Parser.pc;
+		int already_flag=0;
+		int alloc_opr=0;
+		for(int i=0;i<Parser.count;i++){
+			if(arr_table[i].var.equals(token2.image)){
+				already_flag=1;
+				alloc_opr=i;
+				break;
+			}
+		}
+		if(already_flag==0){
+			arr_table[Parser.count].var = token2.image;
+			arr_table[Parser.count].value = 0;
+			arr_table[Parser.count].address = Parser.count;
+			alloc_opr=Parser.count;
+		}
+		code.write(String.format("%2d ",Parser.alloc));
+		code.write(String.format("%5d\n",alloc_opr));
+		++Parser.pc;
+		++Parser.count;
+		code.close();
+	}catch(IOException e){
+		System.err.println("err");
+	}
+	}<LPAREN> (token3=<VARIABLE> 	
+	{try{
+		int address1 = 0;
+		for(int i=0;i<50;i++){
+			if(arr_table[i].var.equals(token3.image)){
+				address1=arr_table[i].address;
+				break;
+			}
+		}
+		FileWriter code = new FileWriter("code.txt",true);
+		code.write(String.format("%2d ",Parser.alloc));
+		code.write(String.format("%5d\n",address1));
+		++Parser.pc;
+		code.write(String.format("%2d ",Parser.store));
+		code.write(String.format("%5d\n",address1));
+		++Parser.pc;
+		code.close();
+		argflag=1;
+		arg=token3.image;
+	}catch(IOException e){
+		System.err.println("err");
+	}
+	}
+	)? <RPAREN>
+	<IS> Program(arr_table,proc_table) <RETURN>
+	{try{
+		int address1=0;
+		if(argflag==1){
+			for(int i=0;i<50;i++){
+				if(arr_table[i].var.equals(arg)){
+					address1=arr_table[i].address;
+					break;
+				}	
+			}
+		}
+		int address2 = 0;
+		for(int i=0;i<50;i++){
+			if(arr_table[i].var.equals(token2.image)){
+				address2=arr_table[i].address;
+				break;
+			}
+		}
+		FileWriter code = new FileWriter("code.txt",true);
+		code.write(String.format("%2d ",Parser.load));
+		code.write(String.format("%5d\n",address2));
+		++Parser.pc;
+		if(argflag==1){
+			code.write(String.format("%2d ",Parser.free));
+			code.write(String.format("%5d\n",address1));
+			++Parser.pc;
+		}
+		code.write(String.format("%2d ",Parser.free));
+		code.write(String.format("%5d\n",address2));
+		++Parser.pc;
+		code.write(String.format("%2d ",Parser.ret));
+		code.write(String.format("%5s\n",token1.image));
+		++Parser.pc;
+		code.close();
+		RandomAccessFile raf = new RandomAccessFile("code.txt","rw");
+        for(int i=0;i<9*jlabel-6;i++){
+            raf.read();
+        }
+        String s = String.format("%5d",Parser.pc);
+        raf.write(s.getBytes());
+        raf.close();
+		FileWriter code2 = new FileWriter("code.txt",true);
+		code2.write(String.format("%2d ",Parser.label));
+		code2.write(String.format("%5d\n",0));
+		++Parser.pc;
+		code2.close();
+	}catch(IOException e){
+		System.err.println("err");
+	}
+	}
+	)*
+}
+
+void RV(s_table[] arr_table,s_table[] proc_table): {Token token1;
+} {
+    (<REMOVE> token1=<VARIABLE> <SEMICOLON>
+	{try{
+		int address1 = 0;
+		for(int i=0;i<50;i++){
+			if(arr_table[i].var.equals(token1.image)){
+				address1=arr_table[i].address;
+				break;
+			}
+		}
+		FileWriter code = new FileWriter("code.txt",true);
+		code.write(String.format("%2d ",Parser.free));
+		code.write(String.format("%5d\n",address1));
+		++Parser.pc;
+		code.close();
+	}catch(IOException e){
+		System.err.println("err");
+	}
+	}
+	)*
+}
+
+/*
+void Q(s_table[] arr_table): {
+} {
+    (Statement(arr_table) <SEMICOLON>)+
+}
+*/
+
+void S(s_table[] arr_table,s_table[] proc_table): {Token token1;Token token2;Token token3;Token token4;int jlabel=0; int jlabel2=0;
+} {
+    token1=<VARIABLE> <EQ> E(arr_table,proc_table)
+	{try{
+		int address1 = 0;
+		for(int i=0;i<Parser.count;i++){
+			if(arr_table[i].var.equals(token1.image)){
+				address1=arr_table[i].address;
+				break;
+			}
+		}
+		FileWriter code = new FileWriter("code.txt",true);
+		code.write(String.format("%2d ",Parser.store));
+		code.write(String.format("%5d\n",address1));
+		++Parser.pc;
+		code.close();
+	}catch(IOException e){
+		System.err.println("err");
+	}
+	}
+    |<IF> C(arr_table,proc_table) <THEN>
+	{try{
+        FileWriter code = new FileWriter("code.txt",true);
+        code.write(String.format("%2d ",Parser.jpc));
+        code.write(String.format("%5d\n",Parser.pc+2));
+        ++Parser.pc;
+        jlabel=Parser.pc;
+        code.write(String.format("%2d ",Parser.jmp));
+        code.write("    0\n");
+        ++Parser.pc;
+        code.write(String.format("%2d ",Parser.label));
+        code.write("    0\n");
+        ++Parser.pc;
+        code.close();
+    }catch(IOException e){
+        System.err.println("err");
+    }
+    }
+	Program(arr_table,proc_table) 
+	{try{
+        FileWriter code = new FileWriter("code.txt",true);
+        jlabel2=Parser.pc;
+        code.write(String.format("%2d ",Parser.jmp));
+        code.write("    0\n");
+        ++Parser.pc;
+        code.close();
+        RandomAccessFile raf = new RandomAccessFile("code.txt","rw");
+        for(int i=0;i<9*jlabel-6;i++){
+            raf.read();
+        }
+        String s = String.format("%5d",Parser.pc);
+        raf.write(s.getBytes());
+        raf.close();
+        FileWriter code2 = new FileWriter("code.txt",true);
+        code2.write(String.format("%2d ",Parser.label));
+        code2.write("    0\n");
+        ++Parser.pc;
+        code2.close();
+    }catch(IOException e){
+        System.err.println("err");
+    }
+    }
+	<ELSE> Program(arr_table,proc_table)
+	{try{
+        FileWriter code = new FileWriter("code.txt",true);
+        code.write(String.format("%2d ",Parser.label));
+        code.write("    0\n");
+        ++Parser.pc;
+        code.close();
+		RandomAccessFile raf = new RandomAccessFile("code.txt","rw");
+        for(int i=0;i<9*jlabel2-6;i++){
+            raf.read();
+        }
+        String s = String.format("%5d",Parser.pc-1);
+        raf.write(s.getBytes());
+        raf.close();
+    }catch(IOException e){
+        System.err.println("err");
+    }
+    }
+	<FI>
+    |<WHILE> token1=<VARIABLE>
+	{try{
+        jlabel2 = Parser.pc;
+        FileWriter code = new FileWriter("code.txt",true);
+        code.write(String.format("%2d ",Parser.w_label));
+        code.write(String.format("%5s\n",token1.image));
+        ++Parser.pc;
+        code.close();
+	}catch(IOException e){
+		System.err.println("err");
+	}
+    }
+	C(arr_table,proc_table) 
+	{try{
+		FileWriter code = new FileWriter("code.txt",true);
+        code.write(String.format("%2d ",Parser.jpc));
+        code.write(String.format("%5d\n",Parser.pc+2));
+        ++Parser.pc;
+        jlabel=Parser.pc;
+        code.write(String.format("%2d ",Parser.jmp));
+        code.write("    0\n");
+        ++Parser.pc;
+        code.write(String.format("%2d ",Parser.label));
+        code.write("    0\n");
+        ++Parser.pc;
+        code.close();
+    }catch(IOException e){
+        System.err.println("err");
+    }
+    }
+	<DO> Program(arr_table,proc_table) <OD>
+	{try{
+        FileWriter code = new FileWriter("code.txt",true);
+        code.write(String.format("%2d ",Parser.jmp));
+        code.write(String.format("%5d\n",jlabel2));
+        ++Parser.pc;
+        //code.write(String.format("%2d ",Parser.label));
+        //code.write("    0\n");
+        //++Parser.pc;
+        code.close();
+		FileWriter code2 = new FileWriter("code.txt",true);
+        code2.write(String.format("%2d ",Parser.w_end));
+        code2.write(String.format("%5s\n",token1.image));
+        ++Parser.pc;
+        code2.close();
+		RandomAccessFile raf2 = new RandomAccessFile("code.txt","rw");
+        for(int i=0;i<9*jlabel-6;i++){
+            raf2.read();
+        }
+        String s2 = String.format("%5d",Parser.pc-1);
+        raf2.write(s2.getBytes());
+        raf2.close();
+    }catch(IOException e){
+        System.err.println("err");
+    }
+    }
+	|<CALL> token1=<VARIABLE> token2=<VARIABLE> <LPAREN> (
+	token4=<VARIABLE> 
+	{try{
+		int address2 = 0;
+		for(int i=0;i<Parser.count;i++){
+			if(arr_table[i].var.equals(token4.image)){
+				address2=arr_table[i].address;
+				break;
+			}
+		}
+        FileWriter code = new FileWriter("code.txt",true);
+		code.write(String.format("%2d ",Parser.load));
+		code.write(String.format("%5d\n",address2));
+		++Parser.pc;
+        code.close();
+	}catch(IOException e){
+		System.err.println("err");
+	}
+    }
+	)?
+	<RPAREN>
+	{try{
+		int address1 = 0;
+		FileWriter table = new FileWriter("proc_table.txt",true);
+		for(int i=0;i<Parser.count;i++){
+			if(proc_table[i].var.equals(token2.image)){
+				address1 = proc_table[i].address;
+				break;
+			}
+		}
+		table.write(String.format("%3s",token1.image));
+		table.write(String.format("%5d\n",address1));
+		table.close();
+        jlabel2 = Parser.pc;
+        FileWriter code = new FileWriter("code.txt",true);
+        code.write(String.format("%2d ",Parser.block));
+		code.write(String.format("%5s\n",token1.image));
+		++Parser.pc;
+		code.write(String.format("%2d ",Parser.jmp));
+		code.write(String.format("%5d\n",address1));
+		++Parser.pc;
+		code.write(String.format("%2d ",Parser.label));
+		code.write(String.format("%5d\n",0));
+		++Parser.pc;
+		code.write(String.format("%2d ",Parser.end));
+		code.write(String.format("%5s\n",token1.image));
+		++Parser.pc;
+        code.close();
+	}catch(IOException e){
+		System.err.println("err");
+	}
+    }
+	|<SK>
+	{try{
+        jlabel2 = Parser.pc;
+        FileWriter code = new FileWriter("code.txt",true);
+        code.write(String.format("%2d ",Parser.nop));
+        code.write("    0\n");
+        ++Parser.pc;
+        code.close();
+	}catch(IOException e){
+		System.err.println("err");
+	}
+    }
+}
+
+void E(s_table[] arr_table,s_table[] proc_table): {
+} {
+    E2(arr_table,proc_table) (Op(arr_table,proc_table) E2(arr_table,proc_table)
+	{try{
+		FileWriter code = new FileWriter("code.txt",true);
+		code.write(String.format("%2d ",Parser.op));
+		code.write(String.format("%5d\n",Parser.op_type));
+		++Parser.pc;
+		code.close();
+	}catch(IOException e){
+		System.err.println("err");
+	}
+	}
+	)*
+}
+
+void E2(s_table[] arr_table,s_table[] proc_table): {Token token1;Token token2;Token token3;Token token4;
+} {
+    token1=<VARIABLE>
+	{try{
+		int address1 = 0;
+		for(int i=0;i<Parser.count;i++){
+			if(arr_table[i].var.equals(token1.image)){
+				address1=arr_table[i].address;
+				break;
+			}
+		}
+		FileWriter code = new FileWriter("code.txt",true);
+		code.write(String.format("%2d ",Parser.load));
+		code.write(String.format("%5d\n",address1));
+		++Parser.pc;
+		code.close();
+	}catch(IOException e){
+		System.err.println("err");
+	}
+	}
+    |token1=<NUMBER>
+	{try{
+		FileWriter code = new FileWriter("code.txt",true);
+		code.write(String.format("%2d ",Parser.ipush));
+		code.write(String.format("%5s\n",token1.image));
+		++Parser.pc;
+		code.close();
+	}catch(IOException e){
+		System.err.println("err");
+	}
+	}
+    |<LPAREN> E(arr_table,proc_table) <RPAREN>
+	|<LBRACE> token1=<VARIABLE> token2=<VARIABLE> <LPAREN> (token4=<VARIABLE> 
+	{try{
+		int address2 = 0;
+		for(int i=0;i<Parser.count;i++){
+			if(arr_table[i].var.equals(token4.image)){
+				address2=arr_table[i].address;
+				break;
+			}
+		}
+        //jlabel2 = Parser.pc;
+        FileWriter code = new FileWriter("code.txt",true);
+		code.write(String.format("%2d ",Parser.load));
+		code.write(String.format("%5d\n",address2));
+		++Parser.pc;
+		code.close();
+	}catch(IOException e){
+		System.err.println("err");
+	}
+	}
+	)?
+	<RPAREN> <RBRACE>
+	{try{
+		int address1 = 0;
+		FileWriter table = new FileWriter("proc_table.txt",true);
+		for(int i=0;i<Parser.count;i++){
+			if(proc_table[i].var.equals(token2.image)){
+				address1 = proc_table[i].address;
+				break;
+			}
+		}
+		table.write(String.format("%3s",token1.image));
+		table.write(String.format("%5d\n",address1));
+		table.close();
+        //jlabel2 = Parser.pc;
+        FileWriter code = new FileWriter("code.txt",true);
+        code.write(String.format("%2d ",Parser.block));
+		code.write(String.format("%5s\n",token1.image));
+		++Parser.pc;
+		code.write(String.format("%2d ",Parser.jmp));
+		code.write(String.format("%5d\n",address1));
+		++Parser.pc;
+		code.write(String.format("%2d ",Parser.label));
+		code.write(String.format("%5d\n",0));
+		++Parser.pc;
+		code.write(String.format("%2d ",Parser.end));
+		code.write(String.format("%5s\n",token1.image));
+		++Parser.pc;
+        code.close();
+	}catch(IOException e){
+		System.err.println("err");
+	}
+    }
+}
+
+void Op(s_table[] arr_table,s_table[] proc_table): {
+} {
+    <PLUS>{Parser.op_type=0;}
+    |<MULT>{Parser.op_type=1;}
+    |<MINUS>{Parser.op_type=2;}
+}
+
+void C(s_table[] arr_table,s_table[] proc_table): {
+} {
+    C2(arr_table,proc_table) (<AND> 
+	{try{
+		FileWriter code = new FileWriter("code.txt",true);
+		code.write(String.format("%2d ",Parser.op));
+		code.write(String.format("    1\n"));
+		++Parser.pc;
+		code.close();
+	}catch(IOException e){
+		System.err.println("err");
+	}
+	}
+	C2(arr_table,proc_table))*
+}
+
+void C2(s_table[] arr_table,s_table[] proc_table): {
+} {
+    
+    <NOT> E(arr_table,proc_table) (B(arr_table,proc_table))*
+    |<LPAREN> E(arr_table,proc_table) (B(arr_table,proc_table))* <RPAREN>
+}
+
+void B(s_table[] arr_table,s_table[] proc_table): {
+} {
+    <EQ> <EQ> E(arr_table,proc_table)
+	{try{
+		FileWriter code = new FileWriter("code.txt",true);
+		code.write(String.format("%2d ",Parser.op));
+		code.write(String.format("    4\n"));
+		++Parser.pc;
+		code.close();
+	}catch(IOException e){
+		System.err.println("err");
+	}
+	}
+    |<GT> E(arr_table,proc_table)
+	{try{
+		FileWriter code = new FileWriter("code.txt",true);
+		code.write(String.format("%2d ",Parser.op));
+		code.write(String.format("    3\n"));
+		++Parser.pc;
+		code.close();
+	}catch(IOException e){
+		System.err.println("err");
+	}
+	}
+}

@@ -1,0 +1,31 @@
+begin b1
+    var x;
+    var y;
+    func f1 fact(x) is
+        par a1
+            begin b2
+                var z;
+                if (x>0) then
+                    begin b3
+                        z=x-1;
+                        fact = x*{c1 fact(z)}
+                    end
+                else
+                    fact=1
+                fi
+                remove z;
+            end
+        ||  begin b4
+                if (x>1) then
+                    x = x-1
+                else
+                    skip
+                fi
+            end
+        rap
+    return
+    x=3;
+    y={c2 fact(x)}
+    remove y;
+    remove x;
+end
