@@ -22,23 +22,20 @@ public class Parser implements ParserConstants {
         public static int jmp      = 5;
         public static int op       = 6;
         public static int label    = 7;
-    //rjmp=8,restore=9
-    public static int par      = 10;
-        public static int alloc    = 11;
-        public static int free     = 12;
-        public static int proc     = 13;
-        public static int proc_end = 14;
-        public static int block    = 15;
-        public static int end      = 16;
-        public static int fork     = 17;
-        public static int merge    = 18;
-        //public static int call     = 19;
-        //public static int ret_label = 20;
-        public static int w_label  = 21;
-        public static int w_end    = 22;
-        public static int func     = 19;
-        public static int ret      = 20;
-        public static int nop      = 0;
+    public static int par      = 8;
+        public static int alloc    = 9;
+        public static int free     = 10;
+        public static int proc     = 11;
+        public static int proc_end = 12;
+        public static int block    = 13;
+        public static int end      = 14;
+        public static int fork     = 15;
+        public static int merge    = 16;
+        public static int w_label  = 19;
+        public static int w_end    = 20;
+        public static int func     = 17;
+        public static int ret      = 18;
+        public static int nop      = 21;
 
         public static void main(String args[]){
         long startTime = System.currentTimeMillis();
