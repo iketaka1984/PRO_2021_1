@@ -5,7 +5,7 @@ begin b1
     proc p1 airline() is
         par a1 
             begin b2
-                while w1 (agent1==1) do
+                while (agent1==1) do
                     if (seats>0) then
                         seats=seats-1
                     else
@@ -14,7 +14,7 @@ begin b1
                 od
             end
         ||  begin b3
-                while w2 (agent2==1) do
+                while (agent2==1) do
                     if (seats>0) then
                         seats=seats-1
                     else   

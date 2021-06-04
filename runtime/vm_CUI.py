@@ -122,22 +122,22 @@ def executedcommand(stack,rstack,lstack,com,opr,pc,pre,top,rtop,ltop,address,val
             ltop.value = ltop.value+2
         pre=pc
         return (pc+1,pre,stack,top,rtop,tablecount,process_path)
-    elif com[pc]==31:#rjmp　ラベルスタックから値を取り出しそのPCにジャンプする
+    elif com[pc]==21:#rjmp　ラベルスタックから値を取り出しそのPCにジャンプする
         a=count_pc-int(lstack[ltop.value])
         ltop.value=ltop.value-2
         pre=pc
         return (a,pre,stack,top,rtop,tablecount,process_path)
-    elif com[pc]==32:#restore　値スタックから値を取り出し共有変数スタックに保存する
+    elif com[pc]==22:#restore　値スタックから値を取り出し共有変数スタックに保存する
         s2=re.search(r'([a-z]\d+\.)+',rstack[rtop.value+1])
         process_path=s2.group()+".E"
         value[search_table(opr[pc],process_path)]=int(rstack[rtop.value])
         rtop.value=rtop.value-2
         pre=pc
         return (pc+1,pre,stack,top,rtop,tablecount,process_path)
-    elif com[pc]==21 or com[pc]==38:#nop　no operation
+    elif com[pc]==19 or com[pc]==28:#nop　no operation
         pre=pc
         return (pc+1,pre,stack,top,rtop,tablecount,process_path)
-    elif com[pc]==8 or com[pc]==33:#par　並列ブロックの開始と終了を示す
+    elif com[pc]==8 or com[pc]==23:#par　並列ブロックの開始と終了を示す
         #if opr[pc]==1:
         #    terminate_flag[flag_number]=1
         #    print(str(flag_number))
@@ -267,20 +267,20 @@ def executedcommand(stack,rstack,lstack,com,opr,pc,pre,top,rtop,ltop,address,val
                 break
         pre=pc
         return (c,pre,stack,top,rtop,tablecount,process_path)
-    elif com[pc]==19:#w_label whileの開始を示しlabel命令とblock命令を行う
-        with open("label_stack.txt",'a') as f:
-            f.write(str(pre+1)+' '+str(process_number)+'\n')
-        f.close()
-        process_path='w'+str(opr[pc])+'.'+process_path
-        pre=pc
-        return (pc+1,pre,stack,top,rtop,tablecount,process_path)
-    elif com[pc]==20:#w_end whileの終了を示しlabel命令とend命令を行う
-        with open("label_stack.txt",'a') as f:
-            f.write(str(pre+1)+' '+str(process_number)+'\n')
-        f.close()
-        process_path=process_path.replace('w'+str(opr[pc])+'.','')
-        return (pc+1,pre,stack,top,rtop,tablecount,process_path)
-    elif com[pc]==34:#r_alloc 逆向きのalloc命令 値スタックから値を取り出し 確保した共有変数スタックの番地に保存する
+        #elif com[pc]==19:#w_label whileの開始を示しlabel命令とblock命令を行う
+        #with open("label_stack.txt",'a') as f:
+        #    f.write(str(pre+1)+' '+str(process_number)+'\n')
+        #f.close()
+        #process_path='w'+str(opr[pc])+'.'+process_path
+        #pre=pc
+        #return (pc+1,pre,stack,top,rtop,tablecount,process_path)
+        #elif com[pc]==20:#w_end whileの終了を示しlabel命令とend命令を行う
+        #with open("label_stack.txt",'a') as f:
+        #    f.write(str(pre+1)+' '+str(process_number)+'\n')
+        #f.close()
+        #process_path=process_path.replace('w'+str(opr[pc])+'.','')
+        #return (pc+1,pre,stack,top,rtop,tablecount,process_path)
+    elif com[pc]==24:#r_alloc 逆向きのalloc命令 値スタックから値を取り出し 確保した共有変数スタックの番地に保存する
         s2=re.search(r'([a-z]\d+\.)+',rstack[rtop.value+1])
         process_path=s2.group()
         with open("variable_table.txt",'a') as f:
@@ -290,10 +290,10 @@ def executedcommand(stack,rstack,lstack,com,opr,pc,pre,top,rtop,ltop,address,val
         rtop.value=rtop.value-2
         pre=pc
         return (pc+1,pre,stack,top,rtop,tablecount,process_path)
-    elif com[pc]==35:#r_free 逆向きのfree命令 変数の解放を示す
+    elif com[pc]==25:#r_free 逆向きのfree命令 変数の解放を示す
         pre=pc
         return (pc+1,pre,stack,top,rtop,tablecount,process_path)
-    elif com[pc]==36:#r_fork 逆向きのfork命令 前向きとは逆順に並列テーブルを参照する
+    elif com[pc]==26:#r_fork 逆向きのfork命令 前向きとは逆順に並列テーブルを参照する
         lock.release()
         process={}
         start_process_count = process_count.value
@@ -337,7 +337,7 @@ def executedcommand(stack,rstack,lstack,com,opr,pc,pre,top,rtop,ltop,address,val
         pre=pc
         lock.acquire()
         return (a,pre,stack,top,rtop,tablecount,process_path)
-    elif com[pc]==37:#r_merge 逆向きのmerge
+    elif com[pc]==27:#r_merge 逆向きのmerge
         pre=pc
         return (pc+1,pre,stack,top,rtop,tablecount,process_path)
 
@@ -387,11 +387,11 @@ def execution(command,opr,start,end,count_pc,stack,address,value,tablecount,rsta
                 command1='    func'
             elif command[pc]==18:
                 command1='f_return'
+                #elif command[pc]==19:
+                #command1=' w_label'
+                #elif command[pc]==20:
+                #command1='   w_end'
             elif command[pc]==19:
-                command1=' w_label'
-            elif command[pc]==20:
-                command1='   w_end'
-            elif command[pc]==21:
                 command1='     nop'
             with open("output.txt",'a') as f:
                 f.write("~~~~~~~~Process"+process_number+" execute~~~~~~~~\n")
@@ -422,28 +422,28 @@ def execution(command,opr,start,end,count_pc,stack,address,value,tablecount,rsta
         terminate_flag[flag_number]=1
     #逆方向
     if args[2]=='b':
-        while pc!=end or command[pre]==36:
+        while pc!=end or command[pre]==26:
             lock.acquire()
-            if command[pc]==31:
+            if command[pc]==21:
                 command1='    rjmp'
-            elif command[pc]==32:
+            elif command[pc]==22:
                 command1='  restore'
-            elif command[pc]==33:
+            elif command[pc]==23:
                 command1='     par'
-            elif command[pc]==34:
+            elif command[pc]==24:
                 command1=' r_alloc'
-            elif command[pc]==35:
+            elif command[pc]==25:
                 command1='  r_free'
-            elif command[pc]==36:
+            elif command[pc]==26:
                 command1='  r_fork'
-            elif command[pc]==37:
+            elif command[pc]==27:
                 command1=' r_merge'
-            elif command[pc]==38:
+            elif command[pc]==28:
                 command1='     nop'
             s=re.search(r'\d(\.\d+)*',lstack[ltop.value+1])
             s2=re.search(r'\d(\.\d+)*',rstack[rtop.value+1])
             #restore,r_alloc,rjmp命令では各値スタック,ラベルスタックトップのプロセス番号と一致しているかどうかを確認する
-            if (process_number==s2.group() and (command[pc]==32 or command[pc]==34)) or (process_number==s.group() and command[pc]==31) or (command[pc]!=31 and command[pc]!=32 and command[pc]!=34):
+            if (process_number==s2.group() and (command[pc]==22 or command[pc]==24)) or (process_number==s.group() and command[pc]==21) or (command[pc]!=21 and command[pc]!=22 and command[pc]!=24):
                 with open("reverse_output.txt",'a') as f:
                     f.write("~~~~~~~~Process"+process_number+" execute~~~~~~~~\n")
                     f.write("path : "+process_path+"\n")
@@ -453,7 +453,7 @@ def execution(command,opr,start,end,count_pc,stack,address,value,tablecount,rsta
                 print("pc = "+str(pc+1)+"("+str(count_pc-pc)+")   command = "+command1+":"+(str)(command[pc])+"    operand = "+str(opr[pc])+"")
                 #各命令を実行する
                 (pc,pre,stack,top,rtop,tablecount,process_path)=executedcommand(stack,rstack,lstack,command,opr,pc,pre,top,rtop,ltop,address,value,tablecount,variable_region,lock,process_number,process_path,count_pc,process_count,terminate_flag,flag_number)
-                if command[pre]==36:
+                if command[pre]==26:
                     with open("reverse_output.txt",'a') as f:
                         f.write("---fork end--- (process "+process_number+")\n")
                     print("---fork end--- (process "+process_number+")")
@@ -488,60 +488,60 @@ def forward(com,opr,count_pc):
     f2=open("inv_code.txt",mode='w')
     for i in range(0,count_pc,1):
         if com[count_pc-i-1]==7:#label to rjmp
-            f2.write("31     0\n")
+            f2.write("21     0\n")
         elif com[count_pc-i-1]==3:#store to restore
-            f2.write("32 "+str(opr[count_pc-i-1]).rjust(5)+"\n")
+            f2.write("22 "+str(opr[count_pc-i-1]).rjust(5)+"\n")
         elif com[count_pc-i-1]==4:#jpc to nop
-            f2.write("38     0\n")
+            f2.write("28     0\n")
         elif com[count_pc-i-1]==5:
-            f2.write("38     0\n")#jmp to nop
+            f2.write("28     0\n")#jmp to nop
         elif com[count_pc-i-1]==8:#par to par
             if opr[count_pc-i-1]==0:
-                f2.write("33 "+str(1).rjust(5)+"\n")
+                f2.write("23 "+str(1).rjust(5)+"\n")
             elif opr[count_pc-i-1]==1:
-                f2.write("33 "+str(0).rjust(5)+"\n")
+                f2.write("23 "+str(0).rjust(5)+"\n")
         elif com[count_pc-i-1]==9:#alloc to r_free
-            f2.write("35 "+str(opr[count_pc-i-1]).rjust(5)+"\n")
+            f2.write("25 "+str(opr[count_pc-i-1]).rjust(5)+"\n")
         elif com[count_pc-i-1]==10:#free to r_alloc
-            f2.write("34 "+str(opr[count_pc-i-1]).rjust(5)+"\n")
+            f2.write("24 "+str(opr[count_pc-i-1]).rjust(5)+"\n")
         elif com[count_pc-i-1]==11:#proc to rjmp
             pname="p"+str(opr[count_pc-i-1])
-            f2.write("31 "+pname.rjust(5)+"\n")
+            f2.write("21 "+pname.rjust(5)+"\n")
         elif com[count_pc-i-1]==12:#p_return to nop
             pname="p"+str(opr[count_pc-i-1])
-            f2.write("38 "+pname.rjust(5)+"\n")
+            f2.write("28 "+pname.rjust(5)+"\n")
         elif com[count_pc-i-1]==13:#block to nop
             if com[count_pc-i]==5 and com[count_pc-i+1]==7 and com[count_pc-i+2]==16:
                 bname="c"+str(opr[count_pc-i-1])
             else:
                 bname="b"+str(opr[count_pc-i-1])
-            f2.write("38 "+bname.rjust(5)+"\n")
+            f2.write("28 "+bname.rjust(5)+"\n")
         elif com[count_pc-i-1]==14:#end to nop
             if com[count_pc-i-2]==7 and com[count_pc-i-3]==5 and com[count_pc-i-4]==15:
                 bname="c"+str(opr[count_pc-i-1])
             else:
                 bname="b"+str(opr[count_pc-i-1])
-            f2.write("38 "+bname.rjust(5)+"\n")
+            f2.write("28 "+bname.rjust(5)+"\n")
         elif com[count_pc-i-1]==15:#fork to r_merge
             aname="a"+str(opr[count_pc-i-1])
-            f2.write("37 "+aname.rjust(5)+"\n")
+            f2.write("27 "+aname.rjust(5)+"\n")
         elif com[count_pc-i-1]==16:#merge to r_fork
             aname="a"+str(opr[count_pc-i-1])
-            f2.write("36 "+aname.rjust(5)+"\n")
+            f2.write("26 "+aname.rjust(5)+"\n")
         elif com[count_pc-i-1]==17:#func to rjmp
             fname="f"+str(opr[count_pc-i-1])
-            f2.write("31 "+fname.rjust(5)+"\n")
+            f2.write("21 "+fname.rjust(5)+"\n")
         elif com[count_pc-i-1]==18:#f_return to nop
             fname="f"+str(opr[count_pc-i-1])
-            f2.write("38 "+fname.rjust(5)+"\n")
-        elif com[count_pc-i-1]==19:#w_label to rjmp
-            wname="w"+str(opr[count_pc-i-1])
-            f2.write("31 "+wname.rjust(5)+"\n")
-        elif com[count_pc-i-1]==20:#w_end to rjmp
-            wname="w"+str(opr[count_pc-i-1])
-            f2.write("31 "+wname.rjust(5)+"\n")
+            f2.write("28 "+fname.rjust(5)+"\n")
+            #elif com[count_pc-i-1]==19:#w_label to rjmp
+            #wname="w"+str(opr[count_pc-i-1])
+            #f2.write("31 "+wname.rjust(5)+"\n")
+            #elif com[count_pc-i-1]==20:#w_end to rjmp
+            #wname="w"+str(opr[count_pc-i-1])
+            #f2.write("31 "+wname.rjust(5)+"\n")
         else:
-            f2.write("38     0\n")
+            f2.write("28     0\n")
     f2.close()
 
 

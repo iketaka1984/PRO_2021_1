@@ -31,11 +31,11 @@ public class Parser implements ParserConstants {
         public static int end      = 14;
         public static int fork     = 15;
         public static int merge    = 16;
-        public static int w_label  = 19;
-        public static int w_end    = 20;
+        //public static int w_label  = 19;
+        //public static int w_end    = 20;
         public static int func     = 17;
         public static int ret      = 18;
-        public static int nop      = 21;
+        public static int nop      = 19;
 
         public static void main(String args[]){
         long startTime = System.currentTimeMillis();
@@ -649,12 +649,11 @@ try{
       }
     case WHILE:{
       jj_consume_token(WHILE);
-      token1 = jj_consume_token(VARIABLE);
 try{
         jlabel2 = Parser.pc;
         FileWriter code = new FileWriter("code.txt",true);
-        code.write(String.format("%2d ",Parser.w_label));
-        code.write(String.format("%5s\u005cn",token1.image));
+        code.write(String.format("%2d ",Parser.label));
+        code.write("    0\u005cn");
         ++Parser.pc;
         code.close();
         }catch(IOException e){
@@ -690,8 +689,8 @@ try{
         //++Parser.pc;
         code.close();
                 FileWriter code2 = new FileWriter("code.txt",true);
-        code2.write(String.format("%2d ",Parser.w_end));
-        code2.write(String.format("%5s\u005cn",token1.image));
+        code2.write(String.format("%2d ",Parser.label));
+        code2.write("    0\u005cn");
         ++Parser.pc;
         code2.close();
                 RandomAccessFile raf2 = new RandomAccessFile("code.txt","rw");
